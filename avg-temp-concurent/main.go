@@ -4,52 +4,58 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func handleLine(res chan float64, line string) {
-	ss := strings.Split(line, ",")
-	if len(ss) != 3 {
-		log.Fatal("invalid line", line)
+// START_HL OMIT
+func handleLine(out chan float64, line string) {
+	tokens := strings.Split(line, ",") // HL
+	if len(tokens) != 3 {
+		log.Fatal("invalid line: ", line)
 	}
-	if ss[1] != "Singapore" {
-		res <- 0.0
+	if tokens[1] != "Singapore" { // HL
+		out <- math.NaN() // HL
 		return
 	}
-	ts, err := time.Parse(time.RFC3339, ss[0])
+	ts, err := time.Parse(time.RFC3339, tokens[0])
 	if err != nil {
-		log.Fatal("unable to parse time", err)
+		log.Fatal("unable to parse time: ", err)
 	}
-	if ts.Month() != time.March {
-		res <- 0.0
+	if ts.Month() != time.March { // HL
+		out <- math.NaN() // HL
 		return
 	}
-	temp, err := strconv.ParseFloat(ss[2], 64)
+	t, err := strconv.ParseFloat(tokens[2], 64)
 	if err != nil {
-		log.Fatal("unable to parse temperature", err)
+		log.Fatal("unable to parse temperature: ", err)
 	}
-	res <- temp
+	out <- t // HL
 }
 
+// END_HL OMIT
+
+// START_MAIN OMIT
 func main() {
 	s := bufio.NewScanner(os.Stdin)
-	res := make(chan float64, 100)
+	out := make(chan float64, 100)
 	n := 0
 	for s.Scan() {
 		n++
-		go handleLine(res, s.Text())
+		go handleLine(out, s.Text()) // HL
 	}
 	sum := 0.0
-	k := 0
+	cnt := 0
 	for i := 0; i < n; i++ {
-		t := <-res
-		if t != 0 {
+		if t := <-out; !math.IsNaN(t) {
 			sum += t
-			k++
+			cnt++
 		}
 	}
-	fmt.Println(sum / float64(k))
+	fmt.Println(sum / float64(cnt))
 }
+
+// END_MAIN OMIT

@@ -1,0 +1,46 @@
+Scalability and Go (TODO)
+Bad concurrency, good concurrency, benchmarking (TODO)
+15 Mar 2015
+
+Konstantin Shaposhnikov
+k.shaposhnikov@gmail.com
+
+
+* Why concurrent programs?
+
+.image gophers.jpg
+
+######################################
+## Example 1
+
+
+* Example 1: Problem definition
+
+Write a program to calculate average March temperature in Singapore.
+
+Input for the program will be CSV file with the following structure:
+
+.code weather-example.csv
+
+
+* Solution 1: Lets go concurrent!
+
+.code -numbers avg-temp-concurent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
+
+* Solution 1: Lets go concurrent! (continued..)
+
+.code -numbers avg-temp-concurent/main.go /START_HL OMIT/,/END_HL OMIT/
+
+#.image concurrency.jpg
+
+* Lets run it
+
+\... on a file with 1 million entries
+\... and different GOMAXPROCS values
+
+
+
+######################################
+## Example 2
+
