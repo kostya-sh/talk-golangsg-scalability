@@ -31,35 +31,30 @@ func main() {
 
 	createTable(db)
 
-	txn, err := db.Begin()
+	// START_MAIN OMIT
+	txn, err := db.Begin() // HL
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := txn.Prepare(pq.CopyIn(table, "time", "city", "value"))
+	stmt, err := txn.Prepare(pq.CopyIn(table, "time", "city", "value")) // HL
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	s := bufio.NewScanner(os.Stdin)
 	for s.Scan() {
 		tokens := strings.Split(s.Text(), ",")
 		if len(tokens) != 3 {
 			log.Fatal("invalid line: ", s.Text())
 		}
-
-		_, err = stmt.Exec(tokens[0], tokens[1], tokens[2])
-		if err != nil {
+		if _, err = stmt.Exec(tokens[0], tokens[1], tokens[2]); err != nil { // HL
 			log.Fatal("exec: ", err)
 		}
 	}
-
-	if _, err = stmt.Exec(); err != nil {
+	if _, err = stmt.Exec(); err != nil { // HL
 		log.Fatal("final exec: ", err)
 	}
-	// if err = stmt.Close(); err != nil {
-	// 	log.Fatal("close: ", err)
-	// }
-	if err = txn.Commit(); err != nil {
+	if err = txn.Commit(); err != nil { // HL
 		log.Fatal("commit: ", err)
 	}
+	// END_MAIN OMIT
 }

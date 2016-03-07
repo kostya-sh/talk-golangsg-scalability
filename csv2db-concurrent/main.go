@@ -23,6 +23,7 @@ func createTable(db *sql.DB) {
 	}
 }
 
+// START_HL OMIT
 func handleLine(st *sql.Stmt, line string) {
 	tokens := strings.Split(line, ",")
 	if len(tokens) != 3 {
@@ -33,6 +34,8 @@ func handleLine(st *sql.Stmt, line string) {
 	}
 }
 
+// END_HL OMIT
+
 func main() {
 	db, err := sql.Open("postgres", "postgres://u:p@localhost/d?sslmode=disable")
 	if err != nil {
@@ -40,8 +43,9 @@ func main() {
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(50)
-
 	createTable(db)
+
+	// START_MAIN OMIT
 	st, err := db.Prepare("insert into " + table + " values ($1, $2, $3)")
 	if err != nil {
 		log.Fatal("prepare: ", err)
@@ -53,9 +57,10 @@ func main() {
 	for s.Scan() {
 		wg.Add(1)
 		go func(line string) {
-			handleLine(st, line)
+			handleLine(st, line) // HL
 			wg.Done()
 		}(s.Text())
 	}
 	wg.Wait()
+	// END_MAIN OMIT
 }

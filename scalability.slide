@@ -32,8 +32,6 @@ Input for the program will be CSV file with the following structure:
 
 .code -numbers avg-temp-concurent/main.go /START_HL OMIT/,/END_HL OMIT/
 
-#.image concurrency.jpg
-
 * Lets run it
 
 \... on a file with 1 million entries
@@ -61,7 +59,7 @@ Q: Can we do better?
 A: ???
 
 
-* Lets go single threaded!
+* Solution 2: Lets go single threaded!
 
 .code -numbers avg-temp-single/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
@@ -72,3 +70,46 @@ A: ???
 
 ######################################
 ## Example 2
+
+* Example 2: Problem definition
+
+Import CSV file of the same structure into PostgreSQL database.
+
+Use table:
+
+    create table temperature (
+        time varchar(30),
+        city varchar(30),
+        value varchar(30)
+    )
+
+
+* Solution 1: Lets go concurrent!
+
+.code -numbers csv2db-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
+* Solution 1: Lets go concurrent! (continued..)
+
+.code -numbers csv2db-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
+
+
+* Lets run it
+
+TODO
+
+Check results:
+
+    echo "select count(*) from temperature" | sudo -u postgres psql d
+
+
+* Solution 2: Batching
+
+.code -numbers csv2db-batch/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
+* Lets run it
+
+    time GOMAXPROCS=1 csv2db-batch < t.csv
+
+Check results:
+
+    echo "select count(*) from temperature" | sudo -u postgres psql d
