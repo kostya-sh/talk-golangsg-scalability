@@ -25,12 +25,12 @@ Input for the program will be CSV file with the following structure:
 
 * Solution 1: Lets go concurrent!
 
-.code -numbers avg-temp-concurent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+.code -numbers avg-temp-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
 
 * Solution 1: Lets go concurrent! (continued..)
 
-.code -numbers avg-temp-concurent/main.go /START_HL OMIT/,/END_HL OMIT/
+.code -numbers avg-temp-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
 
 * Lets run it
 
@@ -43,7 +43,7 @@ Input for the program will be CSV file with the following structure:
 
     for i in 1 2 4 8 16 40 ; do
         echo GOMAXPROCS=$i
-        time GOMAXPROCS=$i avg-temp-concurent < t.csv
+        time GOMAXPROCS=$i avg-temp-concurrent < t.csv
         echo -------
     done
 
