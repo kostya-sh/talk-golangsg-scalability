@@ -55,6 +55,9 @@ func main() {
 			cnt++
 		}
 	}
+	if s.Err() != nil {
+		log.Fatal("scan: ", s.Err())
+	}
 	fmt.Println(sum / float64(cnt))
 }
 

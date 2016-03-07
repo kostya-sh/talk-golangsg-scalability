@@ -37,10 +37,38 @@ Input for the program will be CSV file with the following structure:
 * Lets run it
 
 \... on a file with 1 million entries
+
+    wc -l t.csv
+    head t.csv
+
 \... and different GOMAXPROCS values
 
+    for i in 1 2 4 8 16 40 ; do
+        echo GOMAXPROCS=$i
+        time GOMAXPROCS=$i avg-temp-concurent < t.csv
+        echo -------
+    done
+
+* Hmmmmm
+
+Q: Is it fast?
+A: Not really
+
+Q: Does it scale
+A: Up to 2 CPUs. Not impressive.
+
+Q: Can we do better?
+A: ???
+
+
+* Lets go single threaded!
+
+.code -numbers avg-temp-single/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
+* Running
+
+    time GOMAXPROCS=1 avg-temp-single < t.csv
 
 
 ######################################
 ## Example 2
-
