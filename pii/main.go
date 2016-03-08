@@ -8,10 +8,11 @@ import (
 
 // START_MC OMIT
 func monteCalro(n int) int {
+	r := rand.New(rand.NewSource(rand.Int63())) // HL
 	k := 0
 	for i := 0; i < n; i++ {
-		x := rand.Float64()
-		y := rand.Float64()
+		x := r.Float64() // HL
+		y := r.Float64() // HL
 		if x*x+y*y <= 1 {
 			k++
 		}

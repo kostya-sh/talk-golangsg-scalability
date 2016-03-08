@@ -2,56 +2,67 @@ package benchmarks
 
 import (
 	"math/rand"
-	"runtime"
 	"sync"
 	"testing"
 )
 
-func BenchmarkInt63Threadsafe(b *testing.B) {
+// START_RAND OMIT
+func BenchmarkRandFloat64(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			rand.Int63()
+			rand.Float64() // HL
 		}
 	})
 }
 
-func BenchmarkInt63Unthreadsafe(b *testing.B) {
-	b.RunParallel(func(pb *testing.PB) {
-		r := rand.New(rand.NewSource(1))
-		for pb.Next() {
-			r.Int63()
-		}
-	})
-}
+// END_RAND OMIT
 
-func newRand() interface{} {
-	return rand.New(rand.NewSource(rand.Int63()))
-}
-
-func BenchmarkInt63ThreadsafePooledRand(b *testing.B) {
-	var pool = sync.Pool{New: newRand}
-
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			r := pool.Get().(*rand.Rand)
-			r.Int63()
-			pool.Put(r)
-		}
-	})
-}
-
-func BenchmarkInt63Channels(b *testing.B) {
-	randCh := make(chan int64, 100*runtime.NumCPU())
-
+// START_CHANNELS OMIT
+func BenchmarkRandFloat64_Channels(b *testing.B) {
+	ch := make(chan float64, 1000)
 	go func() {
 		for {
-			randCh <- rand.Int63()
+			ch <- rand.Float64() // HL
 		}
 	}()
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			<-randCh
+			_ = <-ch // HL
 		}
 	})
 }
+
+// END_CHANNELS OMIT
+
+// START_POOL OMIT
+
+func BenchmarkRandFloat64_Pool(b *testing.B) {
+	var pool = sync.Pool{
+		New: func() interface{} {
+			return rand.New(rand.NewSource(rand.Int63()))
+		},
+	}
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			r := pool.Get().(*rand.Rand)
+			r.Float64()
+			pool.Put(r)
+		}
+	})
+}
+
+// END_POOL OMIT
+
+// START_SOURCE OMIT
+func BenchmarkRandFloat64_Source(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		r := rand.New(rand.NewSource(rand.Int63()))
+		for pb.Next() {
+			r.Float64()
+		}
+	})
+}
+
+// END_SOURCE OMIT

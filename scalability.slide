@@ -10,6 +10,23 @@ k.shaposhnikov@gmail.com
 
 .image gophers.jpg
 
+* Concurrency, parallelism and Scalability
+
+Talk by Rob Pike:
+
+.link golang.org/s/concurrency-is-not-parallelism
+
+Concurrency is not parallelism, although it enables parallelism.
+
+If you have only one processor, your program can still be concurrent but it
+cannot be parallel.
+
+On the other hand, a well-written concurrent program might run efficiently in
+parallel on a multiprocessor.
+
+This is scalability (TODO)
+
+
 ######################################
 ## Example 1
 
@@ -113,3 +130,184 @@ Check results:
 Check results:
 
     echo "select count(*) from temperature" | sudo -u postgres psql d
+
+
+#########################
+## Example 3: Pi
+
+* Example 3: Pi
+
+Lets write Go program to calculate Pi using Monte Carlo method.
+
+.image Pi-MonteCarlo.png
+
+* Monte Carlo
+
+This function generates `n` random points and returns number of points that
+belong to a quorter of circle with radius = 1 (TODO)
+
+.code -numbers pi/main.go /START_MC OMIT/,/END_MC OMIT/
+
+* Lets run it concurrently!
+
+Generate 100 million points using NumCPU() goroutines
+
+.code -numbers pi/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
+* Lets run it
+
+    for i in 1 2 4 8 16 40 ; do
+        echo GOMAXPROCS=$i
+        time GOMAXPROCS=$i pi
+        echo -------
+    done
+
+* Lets run it
+
+    for i in 1 2 4 8 16 40 ; do
+        echo GOMAXPROCS=$i
+        time GOMAXPROCS=$i pi
+        echo -------
+    done
+
+The program is fastest when it uses a single CPU core!
+
+.image concurrency.jpg
+
+* Parallel benchmarks
+
+From *https://golang.org/pkg/testing*:
+
+If a benchmark needs to test performance in a parallel setting, it may use the
+RunParallel helper function:
+
+    func BenchmarkTemplateParallel(b *testing.B) {
+        templ := template.Must(template.New("test").Parse("Hello, {{.}}!"))
+        b.RunParallel(func(pb *testing.PB) {
+            var buf bytes.Buffer
+            for pb.Next() {
+                buf.Reset()
+                templ.Execute(&buf, "World")
+            }
+        })
+    }
+
+Such benchmarks are intended to be used with the go test -cpu flag:
+
+    go test -bench BenchmarkTemplateParallel -cpu 1,2,4,8,16,40
+
+* Lets benchmark rand.Float64()
+
+.code benchmarks/rand_test.go /START_RAND OMIT/,/END_RAND OMIT/
+
+And run it:
+
+  go test talk/benchmarks -bench BenchmarkRandFloat64 -cpu 1,2,4,8,16,40
+
+* rand.Float64() doesn't scale
+
+From *https://golang.org/pkg/math/rand*: The default Source is safe for
+concurrent use by multiple goroutines.
+
+It uses sync.Mutex
+
+* Attempt 1: lets use channels
+
+.code benchmarks/rand_test.go /START_CHANNELS OMIT/,/END_CHANNELS OMIT/
+
+And run it:
+
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Channels -cpu 1,2,4,8,16,40
+
+* Channels do not scale
+
+Actually it is even worse than Mutex
+
+This is not true of course but the operation to generate random number is
+relatevely inexpensive comparing to channels overhead.
+
+* Lets use idea from other languages
+
+Java has ThreadLocalRandom.
+
+But there is no thread local storage in Go.
+
+Can we use something else?
+
+* Attempt 2: sync.Pool
+
+.code benchmarks/rand_test.go /START_POOL OMIT/,/END_POOL OMIT/
+
+And run it:
+
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Pool -cpu 1,2,4,8,16,40
+
+* Success?
+
+It certainly scales. The implementation is fairly optimized.
+
+Can we do better
+
+* Attempt 3: do not share state
+
+.code benchmarks/rand_test.go /START_SOURCE OMIT/,/END_SOURCE OMIT/
+
+And run it:
+
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Source -cpu 1,2,4,8,16,40
+
+* Success
+
+This is so fast and scalable.
+
+Lesson: do not share state!
+
+
+* Back to Pi: Pi Improved
+
+.code pii/main.go /START_MC OMIT/,/END_MC OMIT/
+
+Run it
+
+    for i in 1 2 4 8 16 40 ; do
+        echo GOMAXPROCS=$i
+        time GOMAXPROCS=$i pii
+        echo -------
+    done
+
+
+##########################
+## Example
+
+* Example 4: Maps
+
+Lets say we have a config `map[string]string` that is often read from multiple
+goroutines but doesn't change or changes very infrequently.
+
+* Maps are not safe for concurrent use.
+
+Really?
+
+Actually concurrent reads are safe as long as they happen from goroutines that
+started after last modification.
+
+* sync.Mutex
+
+code
+run
+do not scale
+
+* sync.RWMutex
+
+code
+run
+do not scale
+
+* atomic.Value and copy on write
+
+code
+run
+scales
+
+
+* Q&A
