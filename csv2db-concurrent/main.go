@@ -29,7 +29,7 @@ func handleLine(st *sql.Stmt, line string) {
 	if len(tokens) != 3 {
 		log.Fatal("invalid line: ", line)
 	}
-	if _, err := st.Exec(tokens[0], tokens[1], tokens[2]); err != nil {
+	if _, err := st.Exec(tokens[0], tokens[1], tokens[2]); err != nil { // HL
 		log.Fatal(err)
 	}
 }
@@ -46,7 +46,7 @@ func main() {
 	createTable(db)
 
 	// START_MAIN OMIT
-	st, err := db.Prepare("insert into " + table + " values ($1, $2, $3)")
+	st, err := db.Prepare("insert into " + table + " values ($1, $2, $3)") // HL
 	if err != nil {
 		log.Fatal("prepare: ", err)
 	}
@@ -56,10 +56,11 @@ func main() {
 	wg := sync.WaitGroup{}
 	for s.Scan() {
 		wg.Add(1)
-		go func(line string) {
+		line := s.Text()
+		go func() {
 			handleLine(st, line) // HL
 			wg.Done()
-		}(s.Text())
+		}()
 	}
 	wg.Wait()
 	// END_MAIN OMIT

@@ -1,16 +1,20 @@
-Scalability and Go (TODO)
-Bad concurrency, good concurrency, benchmarking (TODO)
+Scalability
+Concurrency, parallelism, scalability, benchmarking
 15 Mar 2015
 
 Konstantin Shaposhnikov
 k.shaposhnikov@gmail.com
 
 
+####################################
+## Intro
+
 * Why concurrent programs?
 
-.image gophers.jpg
+.image files/gophers.jpg
 
-* Concurrency, parallelism and Scalability
+
+* Concurrency, parallelism and scalability
 
 Talk by Rob Pike:
 
@@ -24,20 +28,18 @@ cannot be parallel.
 On the other hand, a well-written concurrent program might run efficiently in
 parallel on a multiprocessor.
 
-This is scalability (TODO)
+We call such program scalable.
 
 
 ######################################
 ## Example 1
 
-
 * Example 1: Problem definition
 
-Write a program to calculate average March temperature in Singapore.
+Develop a program that would calculate average March temperature in Singapore
+using data from a CSV file with the following structure:
 
-Input for the program will be CSV file with the following structure:
-
-.code weather-example.csv
+.code files/weather-example.csv
 
 
 * Solution 1: Lets go concurrent!
@@ -45,44 +47,51 @@ Input for the program will be CSV file with the following structure:
 .code -numbers avg-temp-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
 
-* Solution 1: Lets go concurrent! (continued..)
+* Solution 1 (continued...)
 
 .code -numbers avg-temp-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
 
-* Lets run it
 
-\... on a file with 1 million entries
+* Solution 1: Lets test it
+
+using a file with 1 million line
 
     wc -l t.csv
     head t.csv
 
-\... and different GOMAXPROCS values
+and different GOMAXPROCS values
 
-    for i in 1 2 4 8 16 40 ; do
-        echo GOMAXPROCS=$i
-        time GOMAXPROCS=$i avg-temp-concurrent < t.csv
-        echo -------
+    for i in 1 2 4 8 16 32 40 64 ; do
+        echo -n "$i " >&2
+        GOMAXPROCS=$i /usr/bin/time -f "%e %U" avg-temp-concurrent < t.csv > /dev/null
     done
 
-* Hmmmmm
 
-Q: Is it fast?
+* Solution 1: Conclusion
+
+.image files/avg-temp-concurrent.png
+
+
+Q: Is it fast? Does it scale?
 A: Not really
-
-Q: Does it scale
-A: Up to 2 CPUs. Not impressive.
 
 Q: Can we do better?
 A: ???
 
 
-* Solution 2: Lets go single threaded!
+* Solution 2: Boring and single threaded
 
 .code -numbers avg-temp-single/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
-* Running
+
+* Solution 2: Lets test it
 
     time GOMAXPROCS=1 avg-temp-single < t.csv
+
+
+* Solution 2: Conclusion
+
+0.37 sec
 
 
 ######################################
@@ -90,9 +99,10 @@ A: ???
 
 * Example 2: Problem definition
 
-Import CSV file of the same structure into PostgreSQL database.
+Develop a program that would import temperature data from a CSV file (the same
+structure) into a database table (postgres).
 
-Use table:
+Table schema:
 
     create table temperature (
         time varchar(30),
@@ -103,33 +113,60 @@ Use table:
 
 * Solution 1: Lets go concurrent!
 
+This time it should work!
+
+postgres is a highly scalable database!
+
 .code -numbers csv2db-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
+
 
 * Solution 1: Lets go concurrent! (continued..)
 
 .code -numbers csv2db-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
 
 
-* Lets run it
+* Solution 1: Lets run it
 
-TODO
+using different GOMAXPROCS values
+
+    for i in 1 2 4 8 16 32 40 64 ; do
+        echo -n "$i " >&2
+        GOMAXPROCS=$i /usr/bin/time -f "%e %U" csv2db-concurrent < t.csv > /dev/null
+    done
 
 Check results:
 
     echo "select count(*) from temperature" | sudo -u postgres psql d
 
 
-* Solution 2: Batching
+* Solution 1: Conclusion
+
+.image files/csv2db-concurrent.png
+
+5 minutes?!
+
+Not impressive!
+
+
+* Solution 2: Single threaded batching
 
 .code -numbers csv2db-batch/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
-* Lets run it
+
+* Lets test it
+
+Run
 
     time GOMAXPROCS=1 csv2db-batch < t.csv
 
-Check results:
+and check results:
 
     echo "select count(*) from temperature" | sudo -u postgres psql d
+
+
+* Solution 2: Conclusion
+
+1.6 seconds!
 
 
 #########################
@@ -137,14 +174,11 @@ Check results:
 
 * Example 3: Pi
 
-Lets write Go program to calculate Pi using Monte Carlo method.
+Develop a program to calculate value of Pi using Monte Carlo method.
 
-.image Pi-MonteCarlo.png
+.image files/Pi-MonteCarlo.png
 
 * Monte Carlo
-
-This function generates `n` random points and returns number of points that
-belong to a quorter of circle with radius = 1 (TODO)
 
 .code -numbers pi/main.go /START_MC OMIT/,/END_MC OMIT/
 
@@ -156,23 +190,20 @@ Generate 100 million points using NumCPU() goroutines
 
 * Lets run it
 
-    for i in 1 2 4 8 16 40 ; do
-        echo GOMAXPROCS=$i
-        time GOMAXPROCS=$i pi
-        echo -------
+    for i in 1 2 4 8 16 32 40 64 ; do
+        echo -n "$i " >&2
+        GOMAXPROCS=$i /usr/bin/time -f "%e %U" pi > /dev/null
     done
 
-* Lets run it
 
-    for i in 1 2 4 8 16 40 ; do
-        echo GOMAXPROCS=$i
-        time GOMAXPROCS=$i pi
-        echo -------
-    done
+* First results
 
-The program is fastest when it uses a single CPU core!
+.image files/pi.png
 
-.image concurrency.jpg
+It gets slower ;(
+
+.image files/concurrency.jpg
+
 
 * Parallel benchmarks
 
@@ -194,45 +225,78 @@ RunParallel helper function:
 
 Such benchmarks are intended to be used with the go test -cpu flag:
 
-    go test -bench BenchmarkTemplateParallel -cpu 1,2,4,8,16,40
+    go test -bench BenchmarkTemplateParallel -cpu 1,2,4,8,16,32,40,64
+
 
 * Lets benchmark rand.Float64()
 
-.code benchmarks/rand_test.go /START_RAND OMIT/,/END_RAND OMIT/
+.code benchmarks/rand_test.go /START_GLOBAL OMIT/,/END_GLOBAL OMIT/
 
 And run it:
 
-  go test talk/benchmarks -bench BenchmarkRandFloat64 -cpu 1,2,4,8,16,40
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Global -cpu 1,2,4,8,16,32,40,64
 
-* rand.Float64() doesn't scale
+
+* rand.Float64()
+
+    BenchmarkRandFloat64_Global             50000000          32.6 ns/op
+    BenchmarkRandFloat64_Global-2           20000000          69.0 ns/op
+    BenchmarkRandFloat64_Global-4           10000000           234 ns/op
+    BenchmarkRandFloat64_Global-8            5000000           421 ns/op
+    BenchmarkRandFloat64_Global-16           5000000           336 ns/op
+    BenchmarkRandFloat64_Global-32           5000000           320 ns/op
+    BenchmarkRandFloat64_Global-40           5000000           298 ns/op
+    BenchmarkRandFloat64_Global-64           5000000           256 ns/op
+
+
+rand.Float64() doesn't scale
 
 From *https://golang.org/pkg/math/rand*: The default Source is safe for
 concurrent use by multiple goroutines.
 
-It uses sync.Mutex
+Q: Why?
+Q: It uses sync.Mutex internally
 
-* Attempt 1: lets use channels
 
-.code benchmarks/rand_test.go /START_CHANNELS OMIT/,/END_CHANNELS OMIT/
+* Attempt 1: lets use channel
+
+.code benchmarks/rand_test.go /START_CHANNEL OMIT/,/END_CHANNEL OMIT/
 
 And run it:
 
-  go test talk/benchmarks -bench BenchmarkRandFloat64_Channels -cpu 1,2,4,8,16,40
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Channel -cpu 1,2,4,8,16,32,40,64
 
 * Channels do not scale
+
+    BenchmarkRandFloat64_Channel        20000000          95.6 ns/op
+    BenchmarkRandFloat64_Channel-2      10000000           139 ns/op
+    BenchmarkRandFloat64_Channel-4      10000000           185 ns/op
+    BenchmarkRandFloat64_Channel-8       5000000           319 ns/op
+    BenchmarkRandFloat64_Channel-16      5000000           351 ns/op
+    BenchmarkRandFloat64_Channel-32      3000000           396 ns/op
+    BenchmarkRandFloat64_Channel-40      5000000           442 ns/op
+    BenchmarkRandFloat64_Channel-64      3000000           528 ns/op
+
 
 Actually it is even worse than Mutex
 
 This is not true of course but the operation to generate random number is
 relatevely inexpensive comparing to channels overhead.
 
+
 * Lets use idea from other languages
 
-Java has ThreadLocalRandom.
+Java has java.util.concurrent.ThreadLocalRandom:
+
+    A random number generator isolated to the current thread. ...  When
+    applicable, use of ThreadLocalRandom rather than shared Random objects in
+    concurrent programs will typically encounter much less overhead and
+    contention.
 
 But there is no thread local storage in Go.
 
 Can we use something else?
+
 
 * Attempt 2: sync.Pool
 
@@ -240,13 +304,25 @@ Can we use something else?
 
 And run it:
 
-  go test talk/benchmarks -bench BenchmarkRandFloat64_Pool -cpu 1,2,4,8,16,40
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Pool -cpu 1,2,4,8,16,32,40,64
+
 
 * Success?
 
+    BenchmarkRandFloat64_Pool           30000000            43.6 ns/op
+    BenchmarkRandFloat64_Pool-2         100000000           72.9 ns/op
+    BenchmarkRandFloat64_Pool-4         100000000           11.0 ns/op
+    BenchmarkRandFloat64_Pool-8         30000000            33.5 ns/op
+    BenchmarkRandFloat64_Pool-16        300000000           3.39 ns/op
+    BenchmarkRandFloat64_Pool-32        100000000           12.0 ns/op
+    BenchmarkRandFloat64_Pool-40        1000000000          1.97 ns/op
+    BenchmarkRandFloat64_Pool-64        300000000           3.84 ns/op
+
+
 It certainly scales. The implementation is fairly optimized.
 
-Can we do better
+Q: Can we do better?
+
 
 * Attempt 3: do not share state
 
@@ -254,9 +330,20 @@ Can we do better
 
 And run it:
 
-  go test talk/benchmarks -bench BenchmarkRandFloat64_Source -cpu 1,2,4,8,16,40
+  go test talk/benchmarks -bench BenchmarkRandFloat64_Source -cpu 1,2,4,8,16,32,40,64
+
 
 * Success
+
+    BenchmarkRandFloat64_Source         100000000            13.6 ns/op
+    BenchmarkRandFloat64_Source-2       200000000            6.76 ns/op
+    BenchmarkRandFloat64_Source-4       500000000            3.50 ns/op
+    BenchmarkRandFloat64_Source-8       2000000000           1.75 ns/op
+    BenchmarkRandFloat64_Source-16      2000000000           1.13 ns/op
+    BenchmarkRandFloat64_Source-32      2000000000           0.82 ns/op
+    BenchmarkRandFloat64_Source-40      2000000000           0.67 ns/op
+    BenchmarkRandFloat64_Source-64      2000000000           0.80 ns/op
+
 
 This is so fast and scalable.
 
@@ -269,11 +356,15 @@ Lesson: do not share state!
 
 Run it
 
-    for i in 1 2 4 8 16 40 ; do
-        echo GOMAXPROCS=$i
-        time GOMAXPROCS=$i pii
-        echo -------
+    for i in 1 2 4 8 16 32 40 64 ; do
+        echo -n "$i " >&2
+        GOMAXPROCS=$i /usr/bin/time -f "%e %U" pii > /dev/null
     done
+
+
+* Final Results
+
+.image files/pii.png
 
 
 ##########################

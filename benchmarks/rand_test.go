@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// START_RAND OMIT
-func BenchmarkRandFloat64(b *testing.B) {
+// START_GLOBAL OMIT
+func BenchmarkRandFloat64_Global(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			rand.Float64() // HL
@@ -15,10 +15,10 @@ func BenchmarkRandFloat64(b *testing.B) {
 	})
 }
 
-// END_RAND OMIT
+// END_GLOBAL OMIT
 
-// START_CHANNELS OMIT
-func BenchmarkRandFloat64_Channels(b *testing.B) {
+// START_CHANNEL OMIT
+func BenchmarkRandFloat64_Channel(b *testing.B) {
 	ch := make(chan float64, 1000)
 	go func() {
 		for {
@@ -33,22 +33,22 @@ func BenchmarkRandFloat64_Channels(b *testing.B) {
 	})
 }
 
-// END_CHANNELS OMIT
+// END_CHANNEL OMIT
 
 // START_POOL OMIT
 
 func BenchmarkRandFloat64_Pool(b *testing.B) {
-	var pool = sync.Pool{
-		New: func() interface{} {
-			return rand.New(rand.NewSource(rand.Int63()))
-		},
-	}
+	var pool = sync.Pool{ // HL
+		New: func() interface{} { // HL
+			return rand.New(rand.NewSource(rand.Int63())) // HL
+		}, // HL
+	} // HL
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			r := pool.Get().(*rand.Rand)
+			r := pool.Get().(*rand.Rand) // HL
 			r.Float64()
-			pool.Put(r)
+			pool.Put(r) // HL
 		}
 	})
 }
@@ -58,7 +58,7 @@ func BenchmarkRandFloat64_Pool(b *testing.B) {
 // START_SOURCE OMIT
 func BenchmarkRandFloat64_Source(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
-		r := rand.New(rand.NewSource(rand.Int63()))
+		r := rand.New(rand.NewSource(rand.Int63())) // HL
 		for pb.Next() {
 			r.Float64()
 		}

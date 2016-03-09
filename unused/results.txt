@@ -1,0 +1,90 @@
+c4.8xlarge
+
+avg-temp-concurrent
+
+1   8.47 6.97
+2   7.64 9.57
+4   6.94 12.78
+8   5.18 13.62
+16  8.01 14.41
+32 13.76 25.75
+40 13.02 26.94
+64 13.52 25.27
+
+
+csv2db-concurrent
+
+1  244.52 233.09
+2  235.73 296.81
+4  227.24 330.57
+8  230.87 335.81
+16 230.73 352.46
+32 240.61 317.54
+40 242.51 314.89
+64 260.56 301.82
+
+
+pi
+
+1  8.08  8.10
+2  40.96 82.00
+4  50.26 176.97
+8  58.34 260.32
+16 60.84 385.93
+32 59.61 390.32
+40 59.90 382.16
+64 62.26 363.51
+
+
+pii
+
+1  2.96 2.97
+2  1.53 3.06
+4  0.77 3.07
+8  0.39 3.08
+16 0.23 3.17
+32 0.17 4.09
+40 0.16 4.43
+64 0.16 4.40
+
+
+benchmarks
+
+
+    BenchmarkRandFloat64_Global        	50000000	        32.6 ns/op
+    BenchmarkRandFloat64_Global-2      	20000000	        69.0 ns/op
+    BenchmarkRandFloat64_Global-4      	10000000	       234 ns/op
+    BenchmarkRandFloat64_Global-8      	 5000000	       421 ns/op
+    BenchmarkRandFloat64_Global-16     	 5000000	       336 ns/op
+    BenchmarkRandFloat64_Global-32     	 5000000	       320 ns/op
+    BenchmarkRandFloat64_Global-40     	 5000000	       298 ns/op
+    BenchmarkRandFloat64_Global-64     	 5000000	       256 ns/op
+
+    BenchmarkRandFloat64_Channel    	20000000	        95.6 ns/op
+    BenchmarkRandFloat64_Channel-2  	10000000	       139 ns/op
+    BenchmarkRandFloat64_Channel-4  	10000000	       185 ns/op
+    BenchmarkRandFloat64_Channel-8  	 5000000	       319 ns/op
+    BenchmarkRandFloat64_Channel-16 	 5000000	       351 ns/op
+    BenchmarkRandFloat64_Channel-32 	 3000000	       396 ns/op
+    BenchmarkRandFloat64_Channel-40 	 5000000	       442 ns/op
+    BenchmarkRandFloat64_Channel-64 	 3000000	       528 ns/op
+
+    BenchmarkRandFloat64_Pool       	30000000	        43.6 ns/op
+    BenchmarkRandFloat64_Pool-2     	100000000	        72.9 ns/op
+    BenchmarkRandFloat64_Pool-4     	100000000	        11.0 ns/op
+    BenchmarkRandFloat64_Pool-8     	30000000	        33.5 ns/op
+    BenchmarkRandFloat64_Pool-16    	300000000	         3.39 ns/op
+    BenchmarkRandFloat64_Pool-32    	100000000	        12.0 ns/op
+    BenchmarkRandFloat64_Pool-40    	1000000000	         1.97 ns/op
+    BenchmarkRandFloat64_Pool-64    	300000000	         3.84 ns/op
+
+    BenchmarkRandFloat64_Source     	100000000	        13.6 ns/op
+    BenchmarkRandFloat64_Source-2   	200000000	         6.76 ns/op
+    BenchmarkRandFloat64_Source-4   	500000000	         3.50 ns/op
+    BenchmarkRandFloat64_Source-8   	2000000000	         1.75 ns/op
+    BenchmarkRandFloat64_Source-16  	2000000000	         1.13 ns/op
+    BenchmarkRandFloat64_Source-32  	2000000000	         0.82 ns/op
+    BenchmarkRandFloat64_Source-40  	2000000000	         0.67 ns/op
+    BenchmarkRandFloat64_Source-64  	2000000000	         0.80 ns/op
+
+

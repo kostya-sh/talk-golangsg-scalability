@@ -5,7 +5,7 @@ mkdir -pv $HOME/bin
 cat <<EOF > ~/.bash_profile
 export GOPATH=$HOME
 export GOROOT=$HOME/go
-export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+export PATH=$HOME/bin:$HOME/go/bin:$PATH
 EOF
 
 . ~/.bash_profile
