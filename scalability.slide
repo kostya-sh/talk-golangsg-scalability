@@ -200,7 +200,8 @@ Generate 100 million points using NumCPU() goroutines
 
 .image files/pi.png
 
-It gets slower ;(
+
+* It gets slower ;(
 
 .image files/concurrency.jpg
 
@@ -375,30 +376,104 @@ Run it
 Lets say we have a config `map[string]string` that is often read from multiple
 goroutines but doesn't change or changes very infrequently.
 
+
 * Maps are not safe for concurrent use.
 
 Really?
 
-Actually concurrent reads are safe as long as they happen from goroutines that
-started after last modification.
+Actually concurrent reads are safe as long as all writes "happen before" (as per
+https://golang.org/ref/mem) these reads.
+
+
+* Read only map can be accessed from multiple threads
+
+.code -numbers benchmarks/map_test.go /START_RO/,/END_RO/
+
+
+* Read only results
+
+Race detector doesn't complain:
+
+    go test talk/benchmarks -bench BenchmarkMap_Readonly -race
+
+As expected it is also fast and scales:
+
+    go test talk/benchmarks -bench BenchmarkMap_Readonly -cpu 1,2,4,8,16,32,40,64
+
+    BenchmarkMap_Readonly   10000000           229 ns/op
+    BenchmarkMap_Readonly-2	10000000           133 ns/op
+    BenchmarkMap_Readonly-4	20000000            71.4 ns/op
+
+TODO: results from proper machine
+
+
+* Writes require synchronization
+
+.code -numbers benchmarks/map_test.go /START_NOSYNC/,/END_NOSYNC/
+
+
+* ... continued
+
+It fails with race detector enabled as exepecte
+
+    go test talk/benchmarks -bench BenchmarkMap_NoSync -race
+
+But even without race detector enabled it fails (Go 1.6+):
+
+    go test talk/benchmarks -bench BenchmarkMap_NoSync
+
 
 * sync.Mutex
 
-code
-run
-do not scale
+.code -numbers benchmarks/map_test.go /START_MUTEX/,/END_MUTEX/
+
+* sync.Mutex: results
+
+    go test talk/benchmarks -bench BenchmarkMap_Mutex -cpu 1,2,4,8,16,32,40,64
+
+
+As expected it doesn't scale:
+
+    BenchmarkMap_Mutex       5000000           254 ns/op
+    BenchmarkMap_Mutex-2     5000000           304 ns/op
+    BenchmarkMap_Mutex-4     5000000           320 ns/op
+
+
+TODO: results from proper test machine
+
 
 * sync.RWMutex
 
-code
-run
-do not scale
+.code -numbers benchmarks/map_test.go /START_RWMUTEX/,/END_RWMUTEX/
+
+* sync.RWMutex: results
+
+    go test talk/benchmarks -bench BenchmarkMap_RWMutex -cpu 1,2,4,8,16,32,40,64
+
+Scales but not so good (?):
+
+    BenchmarkMap_RWMutex     5000000           239 ns/op
+    BenchmarkMap_RWMutex-2  10000000           202 ns/op
+    BenchmarkMap_RWMutex-4  20000000           114 ns/op
+
+TODO: results from proper test machine
 
 * atomic.Value and copy on write
 
-code
-run
-scales
+.code -numbers benchmarks/map_test.go /START_ATOMIC/,/END_ATOMIC/
+
+
+* atomic.Value results
+
+    go test talk/benchmarks -bench BenchmarkMap_Atomic -cpu 1,2,4,8,16,32,40,64
+
+Almost as good as non synchronized access
+
+    BenchmarkMap_Atomic      5000000           271 ns/op
+    BenchmarkMap_Atomic-2   10000000           148 ns/op
+    BenchmarkMap_Atomic-4   20000000            90.0 ns/op
+
+TODO: results from proper test machine
 
 
 * Q&A

@@ -1,69 +1,163 @@
 package benchmarks
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
-func BenchmarkRWRead(b *testing.B) {
-	//var rwmu sync.RWMutex
-	var mu sync.Mutex
-	x := map[int]int{1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6}
+// START_RO OMIT
+const n = 100
+
+func BenchmarkMap_Readonly(b *testing.B) {
+	m := map[string]string{} // HL
+	for i := 0; i < n; i++ { // HL
+		m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i) // HL
+	} // HL
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			if m[fmt.Sprintf("key%d", i)] == "impossible value" { // HL
+				fmt.Println("should not be printed")
+			}
+			i = (i + 1) % n
+		}
+	})
+}
+
+// END_RO OMIT
+
+// START_NOSYNC OMIT
+func BenchmarkMap_NoSync(b *testing.B) {
+	// initialization (omitted)
+	m := map[string]string{} // OMIT
+	for i := 0; i < n; i++ { // OMIT
+		m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i) // OMIT
+	} // OMIT
 
 	go func() {
-		var n = 0
-		for {
-			mu.Lock()
-			x[n]++
-			n = (n + 1) % len(x)
-			mu.Unlock()
-
+		for i := 0; ; i = (i + 1) % n {
+			m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i) // HL
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
 	b.RunParallel(func(pb *testing.PB) {
-		var n int
+		i := 0
 		for pb.Next() {
-			mu.Lock()
-			if x[n] != 0 {
-				n = (n + 1) % len(x)
+			if m[fmt.Sprintf("key%d", i)] == "impossible value" { // HL
+				fmt.Println("should not be printed")
 			}
-			mu.Unlock()
+			i = (i + 1) % n
 		}
 	})
 }
 
-func BenchmarkAtomic(b *testing.B) {
-	x := map[int]int{1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6}
-	var m atomic.Value
-	m.Store(x)
+// END_NOSYNC OMIT
 
+// START_MUTEX OMIT
+func BenchmarkMap_Mutex(b *testing.B) {
+	// initialization (omitted)
+	m := map[string]string{} // OMIT
+	for i := 0; i < n; i++ { // OMIT
+		m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i) // OMIT
+	} // OMIT
+	mu := sync.Mutex{} // HL
 	go func() {
-		var n = 0
-		for {
-			xx := m.Load().(map[int]int)
-			xxx := make(map[int]int)
-			for k, v := range xx {
-				xxx[k] = v
-			}
-			xxx[n]++
-			n = (n + 1) % len(xxx)
-			m.Store(xxx)
-
+		for i := 0; ; i = (i + 1) % n {
+			mu.Lock() // HL
+			m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
+			mu.Unlock() // HL
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
 	b.RunParallel(func(pb *testing.PB) {
-		var n int
+		i := 0
 		for pb.Next() {
-			xx := m.Load().(map[int]int)
-			if xx[n] != 0 {
-				n = (n + 1) % len(xx)
+			mu.Lock() // HL
+			if m[fmt.Sprintf("key%d", i)] == "impossible value" {
+				fmt.Println("should not be printed")
 			}
+			mu.Unlock() // HL
+			i = (i + 1) % n
 		}
 	})
 }
+
+// END_MUTEX OMIT
+
+// START_RWMUTEX OMIT
+func BenchmarkMap_RWMutex(b *testing.B) {
+	// initialization (omitted)
+	m := map[string]string{} // OMIT
+	for i := 0; i < n; i++ { // OMIT
+		m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i) // OMIT
+	} // OMIT
+	mu := sync.RWMutex{} // HL
+	go func() {
+		for i := 0; ; i = (i + 1) % n {
+			mu.Lock()
+			m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
+			mu.Unlock()
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			mu.RLock() // HL
+			if m[fmt.Sprintf("key%d", i)] == "impossible value" {
+				fmt.Println("should not be printed")
+			}
+			mu.RUnlock() // HL
+			i = (i + 1) % n
+		}
+	})
+}
+
+// END_RWMUTEX OMIT
+
+func clone(m map[string]string) map[string]string {
+	cm := make(map[string]string)
+	for k, v := range m {
+		cm[k] = v
+	}
+	return cm
+}
+
+// START_ATOMIC OMIT
+func BenchmarkMap_Atomic(b *testing.B) {
+	// initialization (omitted)
+	m := map[string]string{} // OMIT
+	for i := 0; i < n; i++ { // OMIT
+		m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i) // OMIT
+	} // OMIT
+	mv := atomic.Value{} // HL
+	mv.Store(m)          // HL
+	go func() {
+		for i := 0; ; i = (i + 1) % n {
+			m := clone(mv.Load().(map[string]string)) // HL
+			m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
+			mv.Store(m)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			m := mv.Load().(map[string]string) // HL
+			if m[fmt.Sprintf("key%d", i)] == "impossible value" {
+				fmt.Println("should not be printed")
+			}
+			i = (i + 1) % n
+		}
+	})
+}
+
+// END_ATOMIC OMIT
