@@ -141,9 +141,9 @@ func BenchmarkMap_Atomic(b *testing.B) {
 	mv.Store(m)          // HL
 	go func() {
 		for i := 0; ; i = (i + 1) % n {
-			m := clone(mv.Load().(map[string]string)) // HL
-			m[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
-			mv.Store(m)
+			mm := clone(mv.Load().(map[string]string)) // HL
+			mm[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
+			mv.Store(mm)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
@@ -151,8 +151,8 @@ func BenchmarkMap_Atomic(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
-			m := mv.Load().(map[string]string) // HL
-			if m[fmt.Sprintf("key%d", i)] == "impossible value" {
+			mm := mv.Load().(map[string]string) // HL
+			if mm[fmt.Sprintf("key%d", i)] == "impossible value" {
 				fmt.Println("should not be printed")
 			}
 			i = (i + 1) % n

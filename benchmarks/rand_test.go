@@ -19,10 +19,11 @@ func BenchmarkRandFloat64_Global(b *testing.B) {
 
 // START_CHANNEL OMIT
 func BenchmarkRandFloat64_Channel(b *testing.B) {
-	ch := make(chan float64, 1000)
+	ch := make(chan float64, 1000) // HL
 	go func() {
+		r := rand.New(rand.NewSource(rand.Int63())) // HL
 		for {
-			ch <- rand.Float64() // HL
+			ch <- r.Float64() // HL
 		}
 	}()
 

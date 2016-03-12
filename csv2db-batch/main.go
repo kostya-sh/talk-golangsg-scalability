@@ -22,6 +22,16 @@ func createTable(db *sql.DB) {
 	}
 }
 
+func handleLine(st *sql.Stmt, line string) {
+	tokens := strings.Split(line, ",")
+	if len(tokens) != 3 {
+		log.Fatal("invalid line: ", line)
+	}
+	if _, err := st.Exec(tokens[0], tokens[1], tokens[2]); err != nil { // HL
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	db, err := sql.Open("postgres", "postgres://u:p@localhost/d?sslmode=disable")
 	if err != nil {
@@ -42,13 +52,10 @@ func main() {
 	}
 	s := bufio.NewScanner(os.Stdin)
 	for s.Scan() {
-		tokens := strings.Split(s.Text(), ",")
-		if len(tokens) != 3 {
-			log.Fatal("invalid line: ", s.Text())
-		}
-		if _, err = stmt.Exec(tokens[0], tokens[1], tokens[2]); err != nil { // HL
-			log.Fatal("exec: ", err)
-		}
+		handleLine(stmt, s.Text()) // HL
+	}
+	if s.Err() != nil {
+		log.Fatal("scan: ", s.Err())
 	}
 	if _, err = stmt.Exec(); err != nil { // HL
 		log.Fatal("final exec: ", err)

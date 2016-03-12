@@ -53,15 +53,18 @@ func main() {
 	defer st.Close()
 
 	s := bufio.NewScanner(os.Stdin)
-	wg := sync.WaitGroup{}
+	wg := sync.WaitGroup{} // HL
 	for s.Scan() {
-		wg.Add(1)
-		line := s.Text()
+		wg.Add(1)        // HL
+		line := s.Text() // important: call to Text() should be outside of the goroutine
 		go func() {
 			handleLine(st, line) // HL
-			wg.Done()
+			wg.Done()            // HL
 		}()
 	}
-	wg.Wait()
+	if s.Err() != nil {
+		log.Fatal("scan: ", s.Err())
+	}
+	wg.Wait() // HL
 	// END_MAIN OMIT
 }

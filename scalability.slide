@@ -1,5 +1,5 @@
-Scalability
-Concurrency, parallelism, scalability, benchmarking
+Go concurrency primitives and scalability
+Benchmarking and practical advice
 15 Mar 2015
 
 Konstantin Shaposhnikov
@@ -9,9 +9,13 @@ k.shaposhnikov@gmail.com
 ####################################
 ## Intro
 
-* Why concurrent programs?
+* Why do we write concurrent programs?
 
 .image files/gophers.jpg
+
+# Some well known languages and frameworks are either single threaded (node.js,
+# Emacs/elisp, OCaml) or limit scalability to make writing concurrent programs
+# easier (Python).
 
 
 * Concurrency, parallelism and scalability
@@ -28,7 +32,29 @@ cannot be parallel.
 On the other hand, a well-written concurrent program might run efficiently in
 parallel on a multiprocessor.
 
-We call such program scalable.
+We call program that shows better performance on multiple CPUs scalable.
+
+# In this talk we will look into concurrency primitives in Go and how to use
+# them to write scalable programs.
+
+
+* A word of warning
+
+Prefer clean code to clever code
+
+# You might make a function 5 times faster but if it takes only 1% of total time
+# it is not worth it
+
+Always benchmark your program (if performance is important)
+
+# Define import measurements and track them to identify improvements and
+# regressions.
+
+Do not rely too much on micro-benchmarks
+
+# I have to use them in this talk to demonstrate some principles. But the only
+# real performance measurement is how well the final program performs under
+# realistic load conditions on realistic hardware.
 
 
 ######################################
@@ -36,73 +62,14 @@ We call such program scalable.
 
 * Example 1: Problem definition
 
-Develop a program that would calculate average March temperature in Singapore
-using data from a CSV file with the following structure:
+Develop a program that would import temperature data from a CSV file into a
+database table (PostgreSQL).
+
+The CSV file has the following structure:
 
 .code files/weather-example.csv
 
-
-* Solution 1: Lets go concurrent!
-
-.code -numbers avg-temp-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
-
-
-* Solution 1 (continued...)
-
-.code -numbers avg-temp-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
-
-
-* Solution 1: Lets test it
-
-using a file with 1 million line
-
-    wc -l t.csv
-    head t.csv
-
-and different GOMAXPROCS values
-
-    for i in 1 2 4 8 16 32 40 64 ; do
-        echo -n "$i " >&2
-        GOMAXPROCS=$i /usr/bin/time -f "%e %U" avg-temp-concurrent < t.csv > /dev/null
-    done
-
-
-* Solution 1: Conclusion
-
-.image files/avg-temp-concurrent.png
-
-
-Q: Is it fast? Does it scale?
-A: Not really
-
-Q: Can we do better?
-A: ???
-
-
-* Solution 2: Boring and single threaded
-
-.code -numbers avg-temp-single/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
-
-
-* Solution 2: Lets test it
-
-    time GOMAXPROCS=1 avg-temp-single < t.csv
-
-
-* Solution 2: Conclusion
-
-0.37 sec
-
-
-######################################
-## Example 2
-
-* Example 2: Problem definition
-
-Develop a program that would import temperature data from a CSV file (the same
-structure) into a database table (postgres).
-
-Table schema:
+Database table schema:
 
     create table temperature (
         time varchar(30),
@@ -113,25 +80,28 @@ Table schema:
 
 * Solution 1: Lets go concurrent!
 
-This time it should work!
-
-postgres is a highly scalable database!
+*PostgreSQL* is a highly scalable database!
 
 .code -numbers csv2db-concurrent/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
 
-* Solution 1: Lets go concurrent! (continued..)
+* Solution 1: Lets go concurrent! (continued...)
 
 .code -numbers csv2db-concurrent/main.go /START_HL OMIT/,/END_HL OMIT/
 
 
 * Solution 1: Lets run it
 
-using different GOMAXPROCS values
+On a file with 1 million rows:
+
+    wc -l t.csv
+    head t.csv
+
+Using different GOMAXPROCS values
 
     for i in 1 2 4 8 16 32 40 64 ; do
         echo -n "$i " >&2
-        GOMAXPROCS=$i /usr/bin/time -f "%e %U" csv2db-concurrent < t.csv > /dev/null
+        GOMAXPROCS=$i /usr/bin/time -f "%e" csv2db-concurrent < t.csv > /dev/null
     done
 
 Check results:
@@ -143,9 +113,10 @@ Check results:
 
 .image files/csv2db-concurrent.png
 
-5 minutes?!
+Observations:
 
-Not impressive!
+- Is it fast? 4 minutes. Not impressive.
+- Does it scale? Nope.
 
 
 * Solution 2: Single threaded batching
@@ -153,46 +124,49 @@ Not impressive!
 .code -numbers csv2db-batch/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
 
-* Lets test it
+* Solution 2: Lets run it
 
-Run
+Run:
 
-    time GOMAXPROCS=1 csv2db-batch < t.csv
+    time csv2db-batch < t.csv
 
-and check results:
+And check results:
 
     echo "select count(*) from temperature" | sudo -u postgres psql d
 
 
 * Solution 2: Conclusion
 
-1.6 seconds!
+2 seconds!
 
 
 #########################
-## Example 3: Pi
+## Example 2: Pi
 
-* Example 3: Pi
+* Example 2: Pi
 
 Develop a program to calculate value of Pi using Monte Carlo method.
 
 .image files/Pi-MonteCarlo.png
 
+
 * Monte Carlo
 
 .code -numbers pi/main.go /START_MC OMIT/,/END_MC OMIT/
 
-* Lets run it concurrently!
+
+* Lets call it concurrently!
 
 Generate 100 million points using NumCPU() goroutines
 
 .code -numbers pi/main.go /START_MAIN OMIT/,/END_MAIN OMIT/
 
+
 * Lets run it
 
     for i in 1 2 4 8 16 32 40 64 ; do
         echo -n "$i " >&2
-        GOMAXPROCS=$i /usr/bin/time -f "%e %U" pi > /dev/null
+        GOMAXPROCS=$i /usr/bin/time -f "%e" pi > /dev/null
     done
 
 
@@ -201,7 +175,7 @@ Generate 100 million points using NumCPU() goroutines
 .image files/pi.png
 
 
-* It gets slower ;(
+* What a surprise
 
 .image files/concurrency.jpg
 
@@ -252,11 +226,11 @@ And run it:
 
 rand.Float64() doesn't scale
 
-From *https://golang.org/pkg/math/rand*: The default Source is safe for
-concurrent use by multiple goroutines.
-
 Q: Why?
 Q: It uses sync.Mutex internally
+
+From *https://golang.org/pkg/math/rand*: The default Source is safe for
+concurrent use by multiple goroutines.
 
 
 * Attempt 1: lets use channel
@@ -267,7 +241,7 @@ And run it:
 
   go test talk/benchmarks -bench BenchmarkRandFloat64_Channel -cpu 1,2,4,8,16,32,40,64
 
-* Channels do not scale
+* Still not good
 
     BenchmarkRandFloat64_Channel        20000000          95.6 ns/op
     BenchmarkRandFloat64_Channel-2      10000000           139 ns/op
@@ -279,13 +253,13 @@ And run it:
     BenchmarkRandFloat64_Channel-64      3000000           528 ns/op
 
 
-Actually it is even worse than Mutex
+Actually the results look even worse than using a global Mutex.
 
-This is not true of course but the operation to generate random number is
-relatevely inexpensive comparing to channels overhead.
+The operation to generate a random number is relatevely inexpensive so channel
+overhead becomes significant in this case.
 
 
-* Lets use idea from other languages
+* Lets use an idea from other languages
 
 Java has java.util.concurrent.ThreadLocalRandom:
 
@@ -320,7 +294,9 @@ And run it:
     BenchmarkRandFloat64_Pool-64        300000000           3.84 ns/op
 
 
-It certainly scales. The implementation is fairly optimized.
+It scales though a bit unreliably.
+
+The implementation of sync.Pool is optimized to scale.
 
 Q: Can we do better?
 
@@ -359,7 +335,7 @@ Run it
 
     for i in 1 2 4 8 16 32 40 64 ; do
         echo -n "$i " >&2
-        GOMAXPROCS=$i /usr/bin/time -f "%e %U" pii > /dev/null
+        GOMAXPROCS=$i /usr/bin/time -f "%e" pii > /dev/null
     done
 
 
@@ -369,20 +345,34 @@ Run it
 
 
 ##########################
-## Example
+## Example 3
 
-* Example 4: Maps
+* Example 3: Maps
 
-Lets say we have a config `map[string]string` that is often read from multiple
-goroutines but doesn't change or changes very infrequently.
+Lets implement a data structure to store application configuration that is often
+read from multiple goroutines but doesn't change or changes very infrequently.
+
+We will use *map[string]string* as storage data structure.
 
 
 * Maps are not safe for concurrent use.
 
 Really?
 
-Actually concurrent reads are safe as long as all writes "happen before" (as per
-https://golang.org/ref/mem) these reads.
+Concurrent reads are safe as long as all writes "happen before" (as per
+*https://golang.org/ref/mem*) these reads.
+
+    m := readConfig()
+    go func() {
+        ...
+       readConfig(m)
+       ...
+    }
+    go func() {
+        ...
+       readConfig(m)
+       ...
+    }
 
 
 * Read only map can be accessed from multiple threads
@@ -414,7 +404,7 @@ TODO: results from proper machine
 
 * ... continued
 
-It fails with race detector enabled as exepecte
+As expected race detector quickly finds a data race:
 
     go test talk/benchmarks -bench BenchmarkMap_NoSync -race
 
