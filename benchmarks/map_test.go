@@ -143,7 +143,7 @@ func BenchmarkMap_Atomic(b *testing.B) {
 		for i := 0; ; i = (i + 1) % n {
 			mm := clone(mv.Load().(map[string]string)) // HL
 			mm[fmt.Sprintf("key%d", i)] = fmt.Sprintf("newvalue%d", i)
-			mv.Store(mm)
+			mv.Store(mm) // HL
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()

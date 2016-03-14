@@ -1,4 +1,4 @@
-Go concurrency primitives and scalability
+Scalability of Go concurrency primitives
 Benchmarking and practical advice
 15 Mar 2015
 
@@ -12,11 +12,6 @@ k.shaposhnikov@gmail.com
 * Why do we write concurrent programs?
 
 .image files/gophers.jpg
-
-# Some well known languages and frameworks are either single threaded (node.js,
-# Emacs/elisp, OCaml) or limit scalability to make writing concurrent programs
-# easier (Python).
-
 
 * Concurrency, parallelism and scalability
 
@@ -34,27 +29,14 @@ parallel on a multiprocessor.
 
 We call program that shows better performance on multiple CPUs scalable.
 
-# In this talk we will look into concurrency primitives in Go and how to use
-# them to write scalable programs.
-
 
 * A word of warning
 
-Prefer clean code to clever code
+Prefer clean code to clever code.
 
-# You might make a function 5 times faster but if it takes only 1% of total time
-# it is not worth it
+Always benchmark your program (if performance is important).
 
-Always benchmark your program (if performance is important)
-
-# Define import measurements and track them to identify improvements and
-# regressions.
-
-Do not rely too much on micro-benchmarks
-
-# I have to use them in this talk to demonstrate some principles. But the only
-# real performance measurement is how well the final program performs under
-# realistic load conditions on realistic hardware.
+Do not rely too much on micro-benchmarks.
 
 
 ######################################
